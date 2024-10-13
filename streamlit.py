@@ -46,19 +46,20 @@ end_date = st.sidebar.date_input('End Date', value=data['Date'].max())
 filtered_data = data[(data['Date'] >= pd.to_datetime(start_date)) & (data['Date'] <= pd.to_datetime(end_date))]
 
 if selected_countries:
-    try:
-        filtered_data = filtered_data[filtered_data['Country'].isin(label_encoders['Country'].transform(selected_countries))]
-    except KeyError:
-        st.error("Error: Selected country does not exist in the data.")
+    country_indices = label_encoders['Country'].transform(selected_countries)
+    filtered_data = filtered_data[filtered_data['Country'].isin(country_indices)]
 
 if selected_categories:
-    filtered_data = filtered_data[filtered_data['Category'].isin(label_encoders['Category'].transform(selected_categories))]
+    category_indices = label_encoders['Category'].transform(selected_categories)
+    filtered_data = filtered_data[filtered_data['Category'].isin(category_indices)]
 
 if selected_shipping:
-    filtered_data = filtered_data[filtered_data['Shipping_Method'].isin(label_encoders['Shipping_Method'].transform(selected_shipping))]
+    shipping_indices = label_encoders['Shipping_Method'].transform(selected_shipping)
+    filtered_data = filtered_data[filtered_data['Shipping_Method'].isin(shipping_indices)]
 
 if selected_payment_terms:
-    filtered_data = filtered_data[filtered_data['Payment_Terms'].isin(label_encoders['Payment_Terms'].transform(selected_payment_terms))]
+    payment_indices = label_encoders['Payment_Terms'].transform(selected_payment_terms)
+    filtered_data = filtered_data[filtered_data['Payment_Terms'].isin(payment_indices)]
 
 # Main visualizations
 st.title("Comprehensive Imports/Exports Dashboard")
