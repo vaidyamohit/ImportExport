@@ -1,12 +1,10 @@
 import streamlit as st
 import pandas as pd
+import statsmodels.formula.api as smf
 import plotly.express as px
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
 
 # Load the dataset
 file_path = 'https://raw.githubusercontent.com/vaidyamohit/ImportExport/refs/heads/main/Imports_Exports_Dataset.csv'
@@ -95,48 +93,33 @@ else:
 
     # ------------------- PREDICTIVE MODEL SECTION -------------------
 
-    st.header("Predictive Model for Import/Export Decisions")
+    st.header("Predictive Model for Import/Export Shipment Value")
 
-    # Encoding categorical columns for the model
-    label_encoders = {}
-    for column in ['Category', 'Shipping_Method', 'Payment_Terms', 'Country']:
-        le = LabelEncoder()
-        data[column] = le.fit_transform(data[column])
-        label_encoders[column] = le
+    # Define the regression formula
+    # We'll predict the 'Value' of shipment based on several features
+    lin_reg_model = smf.ols('Value ~ Quantity + Weight + Import_Export + Shipping_Method + Payment_Terms', data=data).fit()
 
-    # Split data into features and target for prediction model
-    features = data[['Category', 'Quantity', 'Value', 'Shipping_Method', 'Payment_Terms']]
-    target = data['Country']
+    # Input widgets for user input with float values
+    quantity = st.number_input("Enter Quantity:", min_value=1, step=1)
+    weight = st.number_input("Enter Weight:", min_value=0.01, step=0.01)
+    import_export = st.selectbox("Import or Export", options=data['Import_Export'].unique())
+    shipping_method = st.selectbox("Select Shipping Method", options=data['Shipping_Method'].unique())
+    payment_terms = st.selectbox("Select Payment Terms", options=data['Payment_Terms'].unique())
 
-    # Train-test split
-    X_train, X_test, y_train, y_test = train_test_split(features, target, test_size=0.2, random_state=42)
+    # Button to trigger prediction
+    predict_button = st.button("Predict Shipment Value")
 
-    # Train a Random Forest Classifier
-    clf = RandomForestClassifier(n_estimators=100, random_state=42)
-    clf.fit(X_train, y_train)
+    # Output section for prediction result
+    if predict_button:
+        input_data = pd.DataFrame({
+            'Quantity': [quantity],
+            'Weight': [weight],
+            'Import_Export': [import_export],
+            'Shipping_Method': [shipping_method],
+            'Payment_Terms': [payment_terms]
+        })
 
-    # Dropdowns for prediction
-    product_category = st.selectbox('Select Product Category:', options=label_encoders['Category'].inverse_transform(range(len(label_encoders['Category'].classes_))))
-    shipping_method = st.selectbox('Select Shipping Method:', options=label_encoders['Shipping_Method'].inverse_transform(range(len(label_encoders['Shipping_Method'].classes_))))
-    payment_terms = st.selectbox('Select Payment Terms:', options=label_encoders['Payment_Terms'].inverse_transform(range(len(label_encoders['Payment_Terms'].classes_))))
-    quantity = st.number_input('Enter Quantity:', min_value=1)
-    value = st.number_input('Enter Value:', min_value=1.0, step=0.01)
+        # Predict using the linear regression model
+        prediction = lin_reg_model.predict(input_data)
 
-    # Prediction
-    if st.button('Predict Best Country'):
-        try:
-            # Transform inputs using LabelEncoder
-            product_category_encoded = label_encoders['Category'].transform([product_category])[0]
-            shipping_method_encoded = label_encoders['Shipping_Method'].transform([shipping_method])[0]
-            payment_terms_encoded = label_encoders['Payment_Terms'].transform([payment_terms])[0]
-
-            # Prediction
-            input_data = np.array([[product_category_encoded, quantity, value, shipping_method_encoded, payment_terms_encoded]])
-            prediction = clf.predict(input_data)
-
-            # Decode the predicted country
-            predicted_country = label_encoders['Country'].inverse_transform(prediction)[0]
-
-            st.success(f"The best country to import from based on your selections is: {predicted_country}")
-        except Exception as e:
-            st.error(f"An error occurred during prediction: {str(e)}")
+        st.success(f'Predicted Shipment Value: {prediction.iloc[0]:.2f}')
