@@ -95,13 +95,12 @@ else:
 
     st.header("Predictive Model for Import/Export Shipment Value")
 
-    # Define the regression formula
-    # We'll predict the 'Value' of shipment based on several features
+    # Define the regression formula for shipment value prediction
     lin_reg_model = smf.ols('Value ~ Quantity + Weight + Import_Export + Shipping_Method + Payment_Terms', data=data).fit()
 
     # Input widgets for user input with float values
-    quantity = st.number_input("Enter Quantity:", min_value=1, step=1)
-    weight = st.number_input("Enter Weight:", min_value=0.01, step=0.01)
+    quantity = st.number_input("Enter Quantity:", min_value=1000, value=1000, step=1)
+    weight = st.number_input("Enter Weight:", min_value=1000, value=1000, step=1)
     import_export = st.selectbox("Import or Export", options=data['Import_Export'].unique())
     shipping_method = st.selectbox("Select Shipping Method", options=data['Shipping_Method'].unique())
     payment_terms = st.selectbox("Select Payment Terms", options=data['Payment_Terms'].unique())
@@ -123,3 +122,44 @@ else:
         prediction = lin_reg_model.predict(input_data)
 
         st.success(f'Predicted Shipment Value: {prediction.iloc[0]:.2f}')
+
+    # ------------------- LINEAR REGRESSION FOR COUNTRY PREDICTION -------------------
+
+    st.header("Predictive Model for Best Country")
+
+    # Encoding categorical columns for the model
+    label_encoders = {}
+    for column in ['Country', 'Shipping_Method', 'Payment_Terms']:
+        le = LabelEncoder()
+        data[column] = le.fit_transform(data[column])
+        label_encoders[column] = le
+
+    # Define the regression formula for predicting country (based on Quantity, Weight, Shipping Method, Payment Terms)
+    country_lin_reg_model = smf.ols('Country ~ Quantity + Weight + Shipping_Method + Payment_Terms', data=data).fit()
+
+    # Dropdowns for prediction
+    shipping_method_for_country = st.selectbox('Select Shipping Method for Country Prediction:', options=label_encoders['Shipping_Method'].inverse_transform(range(len(label_encoders['Shipping_Method'].classes_))))
+    payment_terms_for_country = st.selectbox('Select Payment Terms for Country Prediction:', options=label_encoders['Payment_Terms'].inverse_transform(range(len(label_encoders['Payment_Terms'].classes_))))
+    quantity_for_country = st.number_input('Enter Quantity for Country Prediction:', min_value=1000, value=1000, step=1)
+    weight_for_country = st.number_input('Enter Weight for Country Prediction:', min_value=1000, value=1000, step=1)
+
+    # Button to trigger prediction
+    predict_country_button = st.button("Predict Best Country")
+
+    # Output section for country prediction result
+    if predict_country_button:
+        input_country_data = pd.DataFrame({
+            'Quantity': [quantity_for_country],
+            'Weight': [weight_for_country],
+            'Shipping_Method': [label_encoders['Shipping_Method'].transform([shipping_method_for_country])[0]],
+            'Payment_Terms': [label_encoders['Payment_Terms'].transform([payment_terms_for_country])[0]]
+        })
+
+        # Predict using the linear regression model
+        country_prediction = country_lin_reg_model.predict(input_country_data)
+
+        # Get the closest matching country based on the regression result (round to nearest integer)
+        predicted_country_index = int(round(country_prediction.iloc[0]))
+        predicted_country = label_encoders['Country'].inverse_transform([predicted_country_index])[0]
+
+        st.success(f'The best country for import/export based on your selections is: {predicted_country}')
