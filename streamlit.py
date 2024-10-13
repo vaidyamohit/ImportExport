@@ -5,6 +5,7 @@ import plotly.express as px
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
+from sklearn.preprocessing import LabelEncoder
 
 # Load the dataset
 file_path = 'https://raw.githubusercontent.com/vaidyamohit/ImportExport/refs/heads/main/Imports_Exports_Dataset.csv'
@@ -95,7 +96,7 @@ else:
 
     st.header("Predictive Model for Import/Export Shipment Value")
 
-    # Define the regression formula for shipment value prediction
+    # Define the regression formula
     lin_reg_model = smf.ols('Value ~ Quantity + Weight + Import_Export + Shipping_Method + Payment_Terms', data=data).fit()
 
     # Input widgets for user input with float values
@@ -127,14 +128,14 @@ else:
 
     st.header("Predictive Model for Best Country")
 
-    # Encoding categorical columns for the model
+    # Ensure categorical data is encoded
     label_encoders = {}
     for column in ['Country', 'Shipping_Method', 'Payment_Terms']:
         le = LabelEncoder()
         data[column] = le.fit_transform(data[column])
         label_encoders[column] = le
 
-    # Define the regression formula for predicting country (based on Quantity, Weight, Shipping Method, Payment Terms)
+    # Define the regression formula for predicting country
     country_lin_reg_model = smf.ols('Country ~ Quantity + Weight + Shipping_Method + Payment_Terms', data=data).fit()
 
     # Dropdowns for prediction
@@ -158,7 +159,7 @@ else:
         # Predict using the linear regression model
         country_prediction = country_lin_reg_model.predict(input_country_data)
 
-        # Get the closest matching country based on the regression result (round to nearest integer)
+        # Get the closest matching country based on the regression result
         predicted_country_index = int(round(country_prediction.iloc[0]))
         predicted_country = label_encoders['Country'].inverse_transform([predicted_country_index])[0]
 
